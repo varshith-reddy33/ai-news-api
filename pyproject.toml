@@ -1,0 +1,7 @@
+# Python dependencies and project config
+[project]
+name = "ai-news-api"
+version = "0.1.0"
+description = "AI News API"
+requires-python = ">=3.10"
+dependencies = []

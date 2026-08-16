@@ -1,0 +1,1 @@
+"""Collect OpenAI news."""
