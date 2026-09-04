@@ -25,54 +25,82 @@ def scrape() -> list[NewsItem]:
                 timeout=10,
             )
             story_response.raise_for_status()
-
             story = story_response.json()
+
             article_url = story.get("url")
 
             if not article_url:
                 continue
 
-            article_response = requests.get(
-                article_url,
-                timeout=10,
-                headers={
-                    "User-Agent": "Mozilla/5.0 AI-News-API/1.0"
-                },
-            )
-            article_response.raise_for_status()
+            # Special handling for arXiv articles.
+            if "arxiv.org/abs/" in article_url:
+                article_response = requests.get(
+                    article_url,
+                    timeout=10,
+                    headers={
+                        "User-Agent": "Mozilla/5.0 AI-News-API/1.0"
+                    },
+                )
+                article_response.raise_for_status()
+
+                soup = BeautifulSoup(
+                    article_response.text,
+                    "html.parser",
+                )
+
+                abstract = soup.find("blockquote", class_="abstract")
+
+                if abstract:
+                    content = abstract.get_text(" ", strip=True)
+                    content = content.replace("Abstract:", "", 1).strip()
+                else:
+                    continue
+
+            else:
+                article_response = requests.get(
+                    article_url,
+                    timeout=10,
+                    headers={
+                        "User-Agent": "Mozilla/5.0 AI-News-API/1.0"
+                    },
+                )
+                article_response.raise_for_status()
+
+                soup = BeautifulSoup(
+                    article_response.text,
+                    "html.parser",
+                )
+
+                # Remove elements that don't contain useful article text.
+                for element in soup(["script", "style", "nav", "footer"]):
+                    element.decompose()
+
+                # Try common article containers.
+                article = (
+                    soup.find("article")
+                    or soup.find("main")
+                    or soup.find("div", class_="entry-content")
+                    or soup.body
+                )
+
+                if not article:
+                    continue
+
+                paragraphs = article.find_all("p")
+
+                content = "\n".join(
+                    paragraph.get_text(" ", strip=True)
+                    for paragraph in paragraphs
+                )
+
+                # Some pages don't use <p> tags, so use container text.
+                if not content:
+                    content = article.get_text(" ", strip=True)
+
+                if not content:
+                    continue
 
         except requests.RequestException:
-            continue
-
-        soup = BeautifulSoup(article_response.text, "html.parser")
-
-        # Remove elements that don't contain useful article text.
-        for element in soup(["script", "style", "nav", "footer"]):
-            element.decompose()
-
-        # Try common article containers.
-        article = (
-            soup.find("article")
-            or soup.find("main")
-            or soup.find("div", class_="entry-content")
-            or soup.body
-        )
-
-        if not article:
-            continue
-
-        paragraphs = article.find_all("p")
-
-        content = "\n".join(
-            paragraph.get_text(" ", strip=True)
-            for paragraph in paragraphs
-        )
-
-        # Some pages don't use <p> tags, so use the container text as fallback.
-        if not content:
-            content = article.get_text(" ", strip=True)
-
-        if not content:
             continue
 
         news_item = NewsItem(
