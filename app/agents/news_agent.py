@@ -1,36 +1,54 @@
+"""LLM agent for enriching news articles."""
+
+from dotenv import load_dotenv
+from openai import OpenAI
+
 from app.schemas.news import NewsEnrichment, NewsItem
 
 
+load_dotenv()
+
+client = OpenAI()
+
+
 def enrich_news(item: NewsItem) -> NewsEnrichment:
+    """Generate a summary and tags using OpenAI."""
+
     instruction = f"""
-    Summarize the news article.
-    Focus only on the main context.
-    Avoid irrelevant information.
-    Return around 4 relevant tags.
+Summarize the following news article.
 
-    Article title:
-    {item.title}
+Requirements:
+- Focus only on the main context.
+- Keep the summary concise.
+- Avoid irrelevant information.
+- Return around 4 relevant tags.
 
-    Article content:
-    {item.content}
-    """
+Article title:
+{item.title}
 
-    tags = ["Technology"]
+Article content:
+{item.content}
+"""
 
-    if "AI" in item.title or "ai" in item.title:
-        tags.append("AI")
-
-    return NewsEnrichment(
-        summary=item.title,
-        tags=tags,
+    response = client.responses.parse(
+        model="gpt-5-mini",
+        input=[
+            {
+                "role": "user",
+                "content": instruction,
+            }
+        ],
+        text_format=NewsEnrichment,
     )
+
+    return response.output_parsed
 
 
 if __name__ == "__main__":
     item = NewsItem(
         title="Test AI News",
         url="https://example.com",
-        content="This is test content.",
+        content="This is test content about artificial intelligence.",
     )
 
     enrichment = enrich_news(item)
