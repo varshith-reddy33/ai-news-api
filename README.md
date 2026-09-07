@@ -1,45 +1,80 @@
 # AI News API
 
-Project
-We are building an AI News API.
+An AI-powered news pipeline that collects articles from Hacker News,
+uses OpenAI to generate summaries and tags, stores the enriched data
+in PostgreSQL, and exposes it through a FastAPI backend.
 
-The application:
+## Project Flow
 
-collects AI news from multiple sources
-normalizes all sources into one NewsItem format
-enriches news using an LLM
-stores results in PostgreSQL
-exposes stored news through FastAPI
-Workflow
-External Sources → Scrapers → Normalization → LLM Enrichment → PostgreSQL → FastAPI
-
-The batch pipeline writes news to PostgreSQL. The FastAPI service reads news from PostgreSQL.
-
-Technology
-Python
-Pydantic
-OpenAI API
-FastAPI
-SQLAlchemy
+Hacker News
+    ↓
+Scraper
+    ↓
+Pydantic Schema
+    ↓
+OpenAI LLM
+    ↓
 PostgreSQL
-Docker
-uv
-Render
-Project Structure
-ai-news-api/ │ ├── app/ # Our application code │ │ ├── main.py # Start the API and listen for requests │ ├── pipeline.py # Run the daily news collection pipeline │ ├── config.py # Load API keys and app settings │ │ │ ├── api/ # Let other apps access our news │ │ └── routes/ │ │ ├── news.py # Endpoints like GET /news │ │ └── health.py # Check that the API is running │ │ │ ├── scrapers/ # Collect news from external sources │ │ ├── base.py # Common rules for all scrapers │ │ ├── openai.py # Collect OpenAI news │ │ ├── anthropic.py # Collect Anthropic news │ │ └── youtube.py # Collect YouTube content │ │ │ ├── agents/ # Use AI to understand/enrich news │ │ └── news_agent.py # Generate summaries and topics │ │ │ ├── services/ # Coordinate the application's workflows │ │ ├── ingestion.py # Scrape, normalize and save new news │ │ └── enrichment.py # Enrich saved news using the LLM │ │ │ ├── database/ # Store and retrieve news │ │ ├── connection.py # Connect Python to PostgreSQL │ │ ├── models.py # Define database tables │ │ └── repository.py # Read/write news in the database │ │ │ └── schemas/ # Define our common data format │ └── news.py # Define what a NewsItem looks like │ ├── tests/ # Check that the application works │ ├── Dockerfile # Package our Python app for deployment ├── docker-compose.yml # Run app + PostgreSQL locally ├── render.yaml # Tell Render what cloud services to create ├── .env.example # Show which secrets/settings are required ├── pyproject.toml # Python dependencies and project config └── README.md # Explain how to run/use the project
+    ↓
+FastAPI
 
-Responsibilities
-main.py: FastAPI application entry point
-pipeline.py: batch ingestion/enrichment entry point
-api/: HTTP endpoints
-scrapers/: retrieve external data
-agents/: LLM logic
-services/: application workflows
-database/: database connection, models and queries
-schemas/: shared Pydantic schemas
-Principles
-Keep the project simple.
-Use one canonical NewsItem schema.
-Keep scraping, LLM, database and API logic separate.
-The API should not scrape news during a request.
-Build incrementally.
+## Technologies
+
+- Python
+- Pydantic
+- OpenAI API
+- FastAPI
+- SQLAlchemy
+- PostgreSQL
+- Docker
+- uv
+- Git & GitHub
+
+## Current Features
+
+- Scrapes news from Hacker News
+- Normalizes articles using Pydantic
+- Generates summaries and tags using OpenAI
+- Stores articles in PostgreSQL
+- Prevents duplicate articles using URL
+- Provides FastAPI endpoints
+- Swagger/OpenAPI documentation
+- Handles article content extraction, including arXiv articles
+
+## API Endpoints
+
+GET `/health/`
+
+GET `/news/`
+
+GET `/news/{news_id}`
+
+## Running Locally
+
+Start PostgreSQL:
+
+`docker compose -f week3/database-setup/docker/docker-compose.yml up -d`
+
+Create database tables:
+
+`uv run python -m app.database.create_tables`
+
+Run ingestion:
+
+`uv run python -m app.services.ingestion`
+
+Run enrichment:
+
+`uv run python -m app.services.enrichment`
+
+Start the API:
+
+`uv run uvicorn app.main:app --port 8001`
+
+Swagger:
+
+`http://localhost:8001/docs`
+
+## Status
+
+🚧 Ongoing project — currently developed as part of an AI Engineering learning program.
